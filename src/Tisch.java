@@ -4,7 +4,7 @@ import java.util.Random;
 public class Tisch extends Thread{
     private List<Agent> agenten;
     private List<Smoker> smoker;
-    private Object monitor=new Object();
+    private final Object monitor=new Object();
 
     private int anzahlZigaretten=0;
     public Tisch(){
@@ -35,13 +35,12 @@ public class Tisch extends Thread{
                 System.err.println(aktuellerAgent.getAgentenName()+" legt "+zutatenAgent.get(0)+" und "+zutatenAgent.get(1)+" auf den Tisch");
                 //zeigt welche Zutat der ausgewählte Smoker hat
                 String zutatSmoker = aktuellerSmoker.layOnTable();
-                System.err.println(aktuellerSmoker.getSmokerName()+" besitzt "+zutatSmoker+"!");
 
                 // sucht den Smoker mit der fehlenden Zutat
                 while(zutatenAgent.contains(zutatSmoker)){
                     aktuellerSmoker= smoker.get(random.nextInt(3));
                     zutatSmoker = aktuellerSmoker.layOnTable();
-                    System.err.println(aktuellerSmoker.getSmokerName()+" besitzt "+zutatSmoker+", aber nicht die fehlende Zutat!");
+                    System.err.println(aktuellerSmoker.getSmokerName()+" besitzt "+zutatSmoker+"!");
                 }
                 try{
                     //richtiger Smoker gefunden -- Smoker darf rauchen, alle anderen warten

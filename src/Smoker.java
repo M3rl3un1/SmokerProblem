@@ -1,9 +1,9 @@
 import java.lang.Thread;
 
 public class Smoker extends Thread {
-    private String name;
-    private String zutat;
-    private Object monitor;
+    private final String name;
+    private final String zutat;
+    private final Object monitor;
     public Smoker(String name, String zutat, Object monitor){
         this.name=name;
         this.zutat=zutat;
@@ -31,7 +31,7 @@ public class Smoker extends Thread {
     }
     public void willRauchen(){
         //gibt wunsch auf Konsole aus
-        System.err.println(name+" möchte rauchen!");
+        System.err.println(name+" hat alles zum rauchen!");
     }
     public String layOnTable(){
         return zutat;
