@@ -1,43 +1,55 @@
 import java.lang.Thread;
 
 public class Smoker extends Thread {
-    private final String name;
-    private final String zutat;
-    private final Object monitor;
-    public Smoker(String name, String zutat, Object monitor){
-        this.name=name;
+    private String nameSmoker;
+    private Zutat zutat;
+    private Zutat fehlendeZutat1;
+    private Zutat fehlendeZutat2;
+
+    private BoundedBuffer<Zutat> tisch;
+    public Smoker(String name, Zutat zutat, BoundedBuffer<Zutat> tisch){
+        this.nameSmoker=name;
         this.zutat=zutat;
-        this.monitor=monitor;
+        this.tisch = tisch;
+
     }
 
     public void run(){
-        try{
-            willRauchen();
-            smoke();
-        }catch(InterruptedException ex){
-            throw new RuntimeException(ex);
+        getFehlendeZutaten();
+        while(!Thread.currentThread().isInterrupted()){
+            try{
+                synchronized (tisch){
+                    if(tisch.enthaelt(fehlendeZutat1) && tisch.enthaelt(fehlendeZutat2)){
+                        tisch.remove(fehlendeZutat1);
+                        tisch.remove(fehlendeZutat2);
+                        smoke();
+                    }
+                }
+            }catch(InterruptedException ex){
+                this.interrupt();
+            }
+            synchronized (tisch){
+                tisch.notifyAll();
+            }
         }
     }
 
     public void smoke()throws InterruptedException{
-        synchronized (monitor){
-            int sleepTime = (int) (1000*Math.random());
-            System.err.println(name+" raucht!" );
-            Thread.sleep(sleepTime);
-            System.err.println(name+" ist fertig mit rauchen!");
-            monitor.notifyAll();
+        System.err.println(nameSmoker+" hat alle Zutaten und raucht jetzt!");
+        System.err.println();
+        Thread.sleep(150);
+    }
+
+    public void getFehlendeZutaten(){
+        if(zutat == Zutat.PAPIER){
+            fehlendeZutat1 = Zutat.TABAK;
+            fehlendeZutat2 = Zutat.STREICHHOLZ;
+        }else if(zutat == Zutat.STREICHHOLZ){
+            fehlendeZutat1 = Zutat.TABAK;
+            fehlendeZutat2 = Zutat.PAPIER;
+        }else{
+            fehlendeZutat1 = Zutat.PAPIER;
+            fehlendeZutat2 = Zutat.STREICHHOLZ;
         }
-
-    }
-    public void willRauchen(){
-        //gibt wunsch auf Konsole aus
-        System.err.println(name+" hat alles zum rauchen!");
-    }
-    public String layOnTable(){
-        return zutat;
-    }
-
-    public String getSmokerName(){
-        return name;
     }
 }

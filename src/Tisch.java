@@ -1,56 +1,56 @@
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
-public class Tisch extends Thread{
-    private List<Agent> agenten;
-    private List<Smoker> smoker;
-    private final Object monitor=new Object();
+public class Tisch <E> implements BoundedBuffer<E> {
+    private int maxAnzahlZutaten;//Maximale Anzahl von Zutaten auf dem Tisch
 
-    private int anzahlZigaretten=0;
-    public Tisch(){
-        starten();
+    private LinkedList<E> zutatenListe;//Liste der Zutaten auf dem Tisch
+
+    public Tisch(int maxAnzahlZutaten){
+        this.maxAnzahlZutaten= maxAnzahlZutaten;
+        this.zutatenListe = new LinkedList<E>();
     }
-    public void starten(){
-        agenten = List.of(new Agent("Agent 1"),new Agent("Agent 2"));
 
-        smoker = List.of(new Smoker("Willi", "Papier", monitor),new Smoker("Marianne", "Tabak", monitor),new Smoker("Klaus", "Streichholz", monitor));
-    }
+    //Wird von den Agenten (Erzeugern) aufgerufen
     @Override
-    public void run(){
-        while(!isInterrupted()){
-            //Erhöht die Anzahl der gerauchten Zigaretten
-            anzahlZigaretten++;
-            Random random = new Random();
-            //erzeugt die Smoker und Agenten
-            starten();
-            synchronized (monitor){
-                //Zeigt die wievielte Zigarette geraucht werden soll
-                System.err.println("Zigarette "+anzahlZigaretten+" soll geraucht werden!");
-                //waehlt einen Agenten aus, der die nächsten Zutaten auf den Tisch legt
-                Agent aktuellerAgent = agenten.get(random.nextInt(2));
-                //waehlt zufällig einen Raucher aus
-                Smoker aktuellerSmoker = smoker.get(random.nextInt(3));
-                //generiert die Zutaten, die der Agent auf den Tisch legt
-                List<String> zutatenAgent = aktuellerAgent.layOnTable();
-                System.err.println(aktuellerAgent.getAgentenName()+" legt "+zutatenAgent.get(0)+" und "+zutatenAgent.get(1)+" auf den Tisch");
-                //zeigt welche Zutat der ausgewählte Smoker hat
-                String zutatSmoker = aktuellerSmoker.layOnTable();
+    public synchronized void enter(E item) throws InterruptedException {
+        //Wenn schon alle Zutaten auf dem Tisch liegen, warten!
+        while(zutatenListe.size() == maxAnzahlZutaten){
+            this.wait();
+        }
+        //Hinzufügen von Zutaten
+        zutatenListe.add(item);
+        System.err.println("                   Es wurde eine Zutat von "+Thread.currentThread().getName()+" auf den Tisch gelegt! Es liegen jetzt "+ zutatenListe.size()+" Zutaten auf dem Tisch.");
 
-                // sucht den Smoker mit der fehlenden Zutat
-                while(zutatenAgent.contains(zutatSmoker)){
-                    aktuellerSmoker= smoker.get(random.nextInt(3));
-                    zutatSmoker = aktuellerSmoker.layOnTable();
-                    System.err.println(aktuellerSmoker.getSmokerName()+" besitzt "+zutatSmoker+"!");
-                }
-                try{
-                    //richtiger Smoker gefunden -- Smoker darf rauchen, alle anderen warten
-                    aktuellerSmoker.start();
-                    monitor.wait();
-                }catch(InterruptedException ex){
-                    throw new RuntimeException("Fertig geraucht! Es wurden "+anzahlZigaretten+" Zigaretten geraucht.");
-                }
-                }
-            }
+        //Alle Threads wieder aufwecken. Wird am this-Objekt aufgerufen, weil der Tisch der Puffer(Monitor) ist
+        this.notifyAll();
+    }
+
+    //Wird von den Smokern aufgerufen
+    @Override
+    public synchronized E remove(E gebrauchteZutat) throws InterruptedException {
+        E removedItem;
+
+        //Warten wenn keine Zutaten auf dem Tisch sind
+        while(zutatenListe.size()==0){
+            this.wait();
+        }
+
+        // Wunsch aus der Liste entfernen
+        removedItem = zutatenListe.remove(zutatenListe.indexOf(gebrauchteZutat));
+        System.err.println("                   Es wurde eine Zutat von "+Thread.currentThread().getName()+" vom Tisch genommen.");
+
+        //Alle anderen Threads aufwecken
+        this.notifyAll();
+        return removedItem;
+    }
+
+    @Override
+    public boolean enthaelt(E item) {
+        if(zutatenListe.contains(item)){
+            return true;
+        }else{
+            return false;
         }
     }
+}
 
